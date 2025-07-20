@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Four Corner Scouting System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+    .container { max-width: 1400px; margin: auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    header { background: linear-gradient(45deg, #667eea, #764ba2); color: #fff; padding: 30px; text-align: center; }
+    header h1 { font-size: 2.5rem; margin-bottom: 10px; font-weight: 300; }
+    header p { opacity: 0.9; font-size: 1.1rem; }
+    
+    .tabs { display: flex; background: #f8f9fa; border-bottom: 3px solid #e9ecef; }
+    .tabs button { flex: 1; padding: 18px; font-size: 1.1rem; border: none; cursor: pointer; background: transparent; color: #6c757d; font-weight: 500; transition: all 0.3s ease; position: relative; }
+    .tabs button:hover { background: #e9ecef; color: #495057; }
+    .tabs button.active { background: #fff; color: #667eea; font-weight: 600; }
+    .tabs button.active::after { content: ''; position: absolute; bottom: -3px; left: 0; right: 0; height: 3px; background: #667eea; }
+    
+    .section { padding: 30px; display: none; min-height: 80vh; }
+    .section.active { display: block; }
+    
+    /* Common Elements */
+    .player-form { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 30px; padding: 25px; background: #f8f9fa; border-radius: 12px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-weight: 600; margin-bottom: 8px; color: #495057; }
+    .form-group input, .form-group select { padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; transition: all 0.3s ease; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+    
+    .export-buttons { text-align: center; padding: 25px; background: #f8f9fa; margin-top: 30px; border-radius: 12px; }
+    .export-buttons button { margin: 8px; padding: 12px 24px; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: 500; transition: all 0.3s ease; }
+    .btn-secondary { background: #6c757d; color: #fff; }
+    .btn-secondary:hover { background: #5a6268; transform: translateY(-2px); }
+    .btn-primary { background: #667eea; color: #fff; }
+    .btn-primary:hover { background: #5a67d8; transform: translateY(-2px); }
+    .btn-success { background: #28a745; color: #fff; }
+    .btn-success:hover { background: #218838; transform: translateY(-2px); }
+    .btn-download {
+      background: #fff;
+      color: #667eea;
+      border: 2px solid #667eea;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 0 4px;
+      transition: background 0.2s, color 0.2s, border 0.2s, transform 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-download:hover {
+      background: #667eea;
+      color: #fff;
+      border-color: #5a67d8;
+      transform: translateY(-2px);
+    }
+    
+    /* GRID TEMPLATE */
+    .traits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 30px; }
+    .corner { background: #fff; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 5px solid #667eea; }
+    .corner h3 { margin-bottom: 20px; color: #667eea; font-size: 1.3rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .trait { display: flex; align-items: center; margin-bottom: 15px; }
+    .trait label { flex: 1; font-weight: 500; color: #495057; }
+    .trait input[type="range"] { flex: 2; margin: 0 15px; height: 6px; border-radius: 3px; background: #e9ecef; outline: none; }
+    .trait input[type="range"]::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #667eea; cursor: pointer; }
+    .trait .score { width: 30px; text-align: center; font-weight: bold; color: #667eea; font-size: 1.1rem; }
+    .corner-notes { width: 100%; height: 80px; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; margin-top: 15px; resize: vertical; }
+    .corner-score { text-align: center; margin-top: 15px; font-size: 1.2rem; font-weight: 600; color: #28a745; }
+    .radar-container { max-width: 600px; margin: 0 auto 30px; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .overall-rating { text-align: center; padding: 20px; background: linear-gradient(45deg, #28a745, #20c997); color: #fff; border-radius: 12px; margin-bottom: 20px; }
+    .overall-rating h3 { font-size: 1.5rem; margin-bottom: 10px; }
+    .overall-rating .score { font-size: 3rem; font-weight: bold; }
+
+    /* Venn Analysis Styles */
+    .venn-trait-btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      border: none;
+      cursor: grab;
+      margin: 0 4px 8px 0;
+      transition: box-shadow 0.2s, transform 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      outline: none;
+      user-select: none;
+      display: inline-block;
+    }
+    .venn-trait-btn.technical { background: #e6eaff; color: #3b4cca; border: 2px solid #667eea; }
+    .venn-trait-btn.physical { background: #e6f9ed; color: #218838; border: 2px solid #28a745; }
+    .venn-trait-btn.psychological { background: #fffbe6; color: #b38600; border: 2px solid #ffc107; }
+    .venn-trait-btn.social { background: #f3e6ff; color: #764ba2; border: 2px solid #764ba2; }
+    .venn-trait-btn:active { transform: scale(0.97); }
+    .venn-zone.drag-over { box-shadow: 0 0 0 4px #667eea55; }
+    .venn-drop-list .venn-dropped {
+      margin: 8px 0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border-left: 6px solid #667eea;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      position: relative;
+    }
+    .venn-dropped .venn-trait-label { font-weight: 600; margin-right: 8px; }
+    .venn-dropped .venn-note { font-size: 0.97rem; color: #495057; background: #f8f9fa; border-radius: 6px; padding: 4px 8px; margin-left: 8px; }
+    .venn-dropped .venn-category-dot {
+      width: 16px; height: 16px; border-radius: 50%; display: inline-block; margin-right: 6px;
+    }
+    .venn-dropped .venn-remove-btn {
+      position: absolute; right: 8px; top: 8px; background: none; border: none; color: #dc3545; font-size: 1.1rem; cursor: pointer; font-weight: bold;
+    }
+    /* Venn Modern Player Info */
+    .venn-player-form-modern {
+      margin-bottom: 30px;
+      padding: 25px;
+      background: #f8f9fa;
+      border-radius: 12px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 20px;
+    }
+    .venn-player-row {
+      display: contents;
+    }
+    .venn-player-field {
+      display: flex;
+      flex-direction: column;
+    }
+    .venn-player-field label {
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 2px;
+      font-size: 1rem;
+    }
+    .venn-player-field input, .venn-player-field select {
+      padding: 12px;
+      border-radius: 8px;
+      border: 2px solid #e9ecef;
+      font-size: 1rem;
+      background: #fff;
+      transition: all 0.3s ease;
+    }
+    .venn-player-field input:focus, .venn-player-field select:focus {
+      border-color: #667eea;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    span.stats-summary-faded {
+      color: #f4f7fa !important;
+    }
+    #stats-summary-card::after,
+    #stats-summary-card::before {
+      content: none !important;
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Four Corner Scouting System</h1>
+      <p>Comprehensive player assessment across Technical, Physical, Psychological & Social dimensions</p>
+    </header>
+    
+    <div class="tabs">
+      <button id="btn-grid" class="active">Qualitative Report</button>
+      <button id="btn-venn">Zone Analysis</button>
+      <button id="btn-stats">Quantitative Report</button>
+    </div>
+
+    <!-- GRID TEMPLATE -->
+    <div id="grid" class="section active">
+      <div style="text-align: center; margin-bottom: 24px; margin-top: -10px;">
+        <h2 style="color: #667eea; font-size: 2rem; font-weight: 600; margin-bottom: 14px;">Qualitative Report</h2>
+        <p style="font-size: 1rem; color: #495057; margin-bottom: 0;">Fill out the player details and rate each trait. Use the analysis section to summarise strengths, improvements, and overall assessment.</p>
+      </div>
+      <div class="player-form">
+        <div class="form-group">
+          <label>Player Name</label>
+          <input id="grid-playerName" type="text" placeholder="Enter player name">
+        </div>
+        <div class="form-group">
+          <label>Age</label>
+          <input id="grid-playerAge" type="number" placeholder="Age">
+        </div>
+        <div class="form-group">
+          <label>Nationality</label>
+          <input id="grid-playerNationality" type="text" placeholder="e.g., English, Spanish">
+        </div>
+        <div class="form-group">
+          <label>Height (cm)</label>
+          <input id="grid-playerHeight" type="number" placeholder="Height">
+        </div>
+        <div class="form-group">
+          <label>Weight (kg)</label>
+          <input id="grid-playerWeight" type="number" placeholder="Weight">
+        </div>
+        <div class="form-group">
+          <label>Position</label>
+          <input id="grid-playerPosition" type="text" placeholder="e.g., ST, CM, CB">
+        </div>
+        <div class="form-group">
+          <label>Dominant Foot</label>
+          <input id="grid-playerFoot" type="text" placeholder="e.g., Right, Left, Both">
+        </div>
+        <div class="form-group">
+          <label>Match Date</label>
+          <input id="grid-matchDate" type="date">
+        </div>
+        <div class="form-group">
+          <label>Club</label>
+          <input id="grid-playerClub" type="text" placeholder="Current club">
+        </div>
+        <div class="form-group">
+          <label>Opponent</label>
+          <input id="grid-opposition" type="text" placeholder="Opponent team">
+        </div>
+      </div>
+
+      <div class="traits-grid">
+        <div class="corner">
+          <h3>Technical</h3>
+          <div class="trait">
+            <label>Control</label>
+            <input type="range" min="1" max="10" value="5" data-cat="technical">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Passing</label>
+            <input type="range" min="1" max="10" value="5" data-cat="technical">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Shooting</label>
+            <input type="range" min="1" max="10" value="5" data-cat="technical">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Dribbling</label>
+            <input type="range" min="1" max="10" value="5" data-cat="technical">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Tackling</label>
+            <input type="range" min="1" max="10" value="5" data-cat="technical">
+            <span class="score">5</span>
+          </div>
+          <textarea class="corner-notes" placeholder="Technical notes and observations..."></textarea>
+          <div class="corner-score">Technical Score: <span id="grid-technical-score">5.0</span></div>
+        </div>
+
+        <div class="corner">
+          <h3>Physical</h3>
+          <div class="trait">
+            <label>Speed</label>
+            <input type="range" min="1" max="10" value="5" data-cat="physical">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Strength</label>
+            <input type="range" min="1" max="10" value="5" data-cat="physical">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Stamina</label>
+            <input type="range" min="1" max="10" value="5" data-cat="physical">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Agility</label>
+            <input type="range" min="1" max="10" value="5" data-cat="physical">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Jumping</label>
+            <input type="range" min="1" max="10" value="5" data-cat="physical">
+            <span class="score">5</span>
+          </div>
+          <textarea class="corner-notes" placeholder="Physical notes and observations..."></textarea>
+          <div class="corner-score">Physical Score: <span id="grid-physical-score">5.0</span></div>
+        </div>
+
+        <div class="corner">
+          <h3>Psychological</h3>
+          <div class="trait">
+            <label>Concentration</label>
+            <input type="range" min="1" max="10" value="5" data-cat="psychological">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Confidence</label>
+            <input type="range" min="1" max="10" value="5" data-cat="psychological">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Composure</label>
+            <input type="range" min="1" max="10" value="5" data-cat="psychological">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Mindset</label>
+            <input type="range" min="1" max="10" value="5" data-cat="psychological">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Motivation</label>
+            <input type="range" min="1" max="10" value="5" data-cat="psychological">
+            <span class="score">5</span>
+          </div>
+          <textarea class="corner-notes" placeholder="Psychological notes and observations..."></textarea>
+          <div class="corner-score">Psychological Score: <span id="grid-psychological-score">5.0</span></div>
+        </div>
+
+        <div class="corner">
+          <h3>Social</h3>
+          <div class="trait">
+            <label>Communication</label>
+            <input type="range" min="1" max="10" value="5" data-cat="social">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Leadership</label>
+            <input type="range" min="1" max="10" value="5" data-cat="social">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Teamwork</label>
+            <input type="range" min="1" max="10" value="5" data-cat="social">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Attitude</label>
+            <input type="range" min="1" max="10" value="5" data-cat="social">
+            <span class="score">5</span>
+          </div>
+          <div class="trait">
+            <label>Respect</label>
+            <input type="range" min="1" max="10" value="5" data-cat="social">
+            <span class="score">5</span>
+          </div>
+          <textarea class="corner-notes" placeholder="Social notes and observations..."></textarea>
+          <div class="corner-score">Social Score: <span id="grid-social-score">5.0</span></div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 30px; margin-bottom: 30px;">
+        <div class="radar-container" style="flex: 1;">
+          <h3 style="text-align: center; margin-bottom: 20px; color: #667eea;">Player Radar Chart</h3>
+          <canvas id="radarChart" width="400" height="400"></canvas>
+          <div style="text-align:center; margin-top:10px;">
+            <button class="btn-download" onclick="downloadChartAsPNG('radarChart', 'Radar_Chart.png')">Download Radar Chart</button>
+          </div>
+        </div>
+        
+        <div style="flex: 1; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); min-height: 40px; max-height: 688px; display: flex; flex-direction: column;">
+          <!-- max-height increased to 600px for better match; adjust as needed -->
+          <h3 style="text-align: center; margin-bottom: 10px; color: #667eea;">Player Analysis</h3>
+          <div style="margin-bottom: 15px; flex: 1;">
+            <h4 style="color: #28a745; margin-bottom: 8px; font-size: 1.1rem;">Biggest Strengths</h4>
+            <textarea id="strengths-textarea" placeholder="Enter the player's three biggest strengths..." style="width: 100%; height: 80px; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+          </div>
+          <div style="margin-bottom: 15px; flex: 1;">
+            <h4 style="color: #dc3545; margin-bottom: 8px; font-size: 1.1rem;">Areas for Improvement</h4>
+            <textarea id="improvements-textarea" placeholder="Enter the three biggest areas for improvement..." style="width: 100%; height: 80px; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+          </div>
+          <div style="flex: 1;">
+            <h4 style="color: #667eea; margin-bottom: 8px; font-size: 1.1rem;">Overall Assessment</h4>
+            <textarea id="overall-assessment-textarea" placeholder="Brief overall assessment of the player..." style="width: 100%; height: 80px; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="overall-rating">
+        <h3>Overall Player Rating</h3>
+        <div class="score" id="grid-overall">5.0</div>
+      </div>
+
+      <div class="export-buttons">
+        <button class="btn-secondary" onclick="loadGridSample()">Load Sample Data</button>
+        <button class="btn-primary" onclick="exportGridData()">Export Excel</button>
+        <button class="btn-success" onclick="saveGridJSON()">Save JSON</button>
+      </div>
+    </div>
+
+    <!-- Other templates would go here but focusing on Grid for now -->
+    <div id="venn" class="section">
+      <div style="text-align: center; margin-bottom: 24px; margin-top: -10px;">
+        <h2 style="color: #667eea; font-size: 2rem; font-weight: 600; margin-bottom: 14px;">Zone Analysis</h2>
+        <p style="font-size: 1rem; color: #495057; margin-bottom: 0;">Drag and drop traits into the appropriate zone and add notes for each. Use this to categorise a player's strengths and areas for improvement.</p>
+      </div>
+      <div id="venn-player-form" class="venn-player-form-modern">
+        <div class="venn-player-field">
+          <label for="venn-playerName">Player Name</label>
+          <input id="venn-playerName" type="text" placeholder="Enter player name">
+        </div>
+        <div class="venn-player-field">
+          <label for="venn-playerAge">Age</label>
+          <input id="venn-playerAge" type="number" placeholder="Age">
+        </div>
+        <div class="venn-player-field">
+          <label for="venn-playerNationality">Nationality</label>
+          <input id="venn-playerNationality" type="text" placeholder="e.g., English, Spanish">
+        </div>
+        <div class="venn-player-field">
+          <label for="venn-playerHeight">Height (cm)</label>
+          <input id="venn-playerHeight" type="number" placeholder="Height">
+        </div>
+        <div class="venn-player-field">
+          <label for="venn-playerWeight">Weight (kg)</label>
+          <input id="venn-playerWeight" type="number" placeholder="Weight">
+        </div>
+        <div class="venn-player-field">
+          <label for="venn-playerPosition">Position</label>
+          <input id="venn-playerPosition" type="text" placeholder="e.g., ST, CM, CB">
+        </div>
+        <div class="venn-player-field">
+          <label for="venn-playerFoot">Dominant Foot</label>
+          <input id="venn-playerFoot" type="text" placeholder="e.g., Right, Left, Both">
+        </div>
+        <div class="venn-player-field">
+          <label for="venn-matchDate">Match Date</label>
+          <input id="venn-matchDate" type="date">
+        </div>
+        <div class="venn-player-field">
+          <label for="venn-playerClub">Club</label>
+          <input id="venn-playerClub" type="text" placeholder="Current club">
+        </div>
+        <div class="venn-player-field">
+          <label for="venn-opposition">Opponent</label>
+          <input id="venn-opposition" type="text" placeholder="Opponent team">
+        </div>
+      </div>
+      <div id="venn-instructions" style="text-align:center; margin-bottom:18px; color:#495057;">Drag and drop traits from below into the appropriate zone. Add a note for each placement.</div>
+      <div id="venn-zones" style="display:flex; justify-content:space-between; gap:24px; max-width:1200px; margin:0 auto 32px auto;">
+        <div class="venn-zone" id="venn-strengths" style="flex:1; min-height:320px; background:#e6f9ed; border:2px solid #28a745; border-radius:16px; padding:18px; display:flex; flex-direction:column; align-items:center;">
+          <h3 style="color:#28a745; margin-bottom:12px;">Strengths</h3>
+          <div class="venn-drop-list" id="venn-strengths-list" style="width:100%; min-height:200px;"></div>
+        </div>
+        <div class="venn-zone" id="venn-average" style="flex:1; min-height:320px; background:#fff7e6; border:2px solid #ff9800; border-radius:16px; padding:18px; display:flex; flex-direction:column; align-items:center;">
+          <h3 style="color:#ff9800; margin-bottom:12px;">Average</h3>
+          <div class="venn-drop-list" id="venn-average-list" style="width:100%; min-height:200px;"></div>
+        </div>
+        <div class="venn-zone" id="venn-weaknesses" style="flex:1; min-height:320px; background:#ffeaea; border:2px solid #dc3545; border-radius:16px; padding:18px; display:flex; flex-direction:column; align-items:center;">
+          <h3 style="color:#dc3545; margin-bottom:12px;">Areas for Improvement</h3>
+          <div class="venn-drop-list" id="venn-weaknesses-list" style="width:100%; min-height:200px;"></div>
+        </div>
+      </div>
+      <div id="venn-traits" style="max-width:1200px; margin:0 auto; display:flex; flex-wrap:wrap; gap:12px; justify-content:center;">
+        <!-- Trait buttons will be injected here -->
+      </div>
+      <div class="export-buttons" id="venn-export-buttons" style="text-align: center; padding: 25px; background: #f8f9fa; margin-top: 30px; border-radius: 12px;">
+        <button class="btn-secondary" onclick="loadVennSample()">Load Sample Data</button>
+        <button class="btn-primary" onclick="exportVennExcel()">Export Excel</button>
+        <button class="btn-success" onclick="saveVennJSON()">Save JSON</button>
+      </div>
+    </div>
+
+    <div id="stats" class="section">
+      <div style="text-align: center; margin-bottom: 24px; margin-top: -10px;">
+        <h2 style="color: #667eea; font-size: 2rem; font-weight: 600; margin-bottom: 14px;">Quantitative Report</h2>
+        <p style="font-size: 1rem; color: #495057; margin-bottom: 0;">Enter player details and score each trait to generate a comprehensive statistical report.</p>
+      </div>
+
+      <!-- Player Info Form -->
+      <div class="player-form" id="stats-player-form" style="margin-bottom: 18px; background: #f4f7fa; padding: 18px 12px;">
+        <div class="form-group">
+          <label>Player Name</label>
+          <input id="stats-playerName" type="text" placeholder="Enter player name">
+        </div>
+        <div class="form-group">
+          <label>Age</label>
+          <input id="stats-playerAge" type="number" placeholder="Age">
+        </div>
+        <div class="form-group">
+          <label>Nationality</label>
+          <input id="stats-playerNationality" type="text" placeholder="e.g., English, Spanish">
+        </div>
+        <div class="form-group">
+          <label>Height (cm)</label>
+          <input id="stats-playerHeight" type="number" placeholder="Height">
+        </div>
+        <div class="form-group">
+          <label>Weight (kg)</label>
+          <input id="stats-playerWeight" type="number" placeholder="Weight">
+        </div>
+        <div class="form-group">
+          <label>Position</label>
+          <input id="stats-playerPosition" type="text" placeholder="e.g., ST, CM, CB">
+        </div>
+        <div class="form-group">
+          <label>Dominant Foot</label>
+          <input id="stats-playerFoot" type="text" placeholder="e.g., Right, Left, Both">
+        </div>
+        <div class="form-group">
+          <label>Match Date</label>
+          <input id="stats-matchDate" type="date">
+        </div>
+        <div class="form-group">
+          <label>Club</label>
+          <input id="stats-playerClub" type="text" placeholder="Current club">
+        </div>
+        <div class="form-group">
+          <label>Opponent</label>
+          <input id="stats-opposition" type="text" placeholder="Opponent team">
+        </div>
+      </div>
+
+      <!-- Trait Sliders (restored) -->
+      <div class="traits-grid" id="stats-traits-grid" style="margin-bottom: 18px; gap: 16px;">
+        <div class="corner" style="padding: 16px 12px;">
+          <h3>Technical</h3>
+          <div class="trait"><label>Control</label><input type="range" min="1" max="10" value="5" data-cat="technical"><span class="score">5</span></div>
+          <div class="trait"><label>Passing</label><input type="range" min="1" max="10" value="5" data-cat="technical"><span class="score">5</span></div>
+          <div class="trait"><label>Shooting</label><input type="range" min="1" max="10" value="5" data-cat="technical"><span class="score">5</span></div>
+          <div class="trait"><label>Dribbling</label><input type="range" min="1" max="10" value="5" data-cat="technical"><span class="score">5</span></div>
+          <div class="trait"><label>Tackling</label><input type="range" min="1" max="10" value="5" data-cat="technical"><span class="score">5</span></div>
+        </div>
+        <div class="corner" style="padding: 16px 12px;">
+          <h3>Physical</h3>
+          <div class="trait"><label>Speed</label><input type="range" min="1" max="10" value="5" data-cat="physical"><span class="score">5</span></div>
+          <div class="trait"><label>Strength</label><input type="range" min="1" max="10" value="5" data-cat="physical"><span class="score">5</span></div>
+          <div class="trait"><label>Stamina</label><input type="range" min="1" max="10" value="5" data-cat="physical"><span class="score">5</span></div>
+          <div class="trait"><label>Agility</label><input type="range" min="1" max="10" value="5" data-cat="physical"><span class="score">5</span></div>
+          <div class="trait"><label>Jumping</label><input type="range" min="1" max="10" value="5" data-cat="physical"><span class="score">5</span></div>
+        </div>
+        <div class="corner" style="padding: 16px 12px;">
+          <h3>Psychological</h3>
+          <div class="trait"><label>Concentration</label><input type="range" min="1" max="10" value="5" data-cat="psychological"><span class="score">5</span></div>
+          <div class="trait"><label>Confidence</label><input type="range" min="1" max="10" value="5" data-cat="psychological"><span class="score">5</span></div>
+          <div class="trait"><label>Composure</label><input type="range" min="1" max="10" value="5" data-cat="psychological"><span class="score">5</span></div>
+          <div class="trait"><label>Mindset</label><input type="range" min="1" max="10" value="5" data-cat="psychological"><span class="score">5</span></div>
+          <div class="trait"><label>Motivation</label><input type="range" min="1" max="10" value="5" data-cat="psychological"><span class="score">5</span></div>
+        </div>
+        <div class="corner" style="padding: 16px 12px;">
+          <h3>Social</h3>
+          <div class="trait"><label>Communication</label><input type="range" min="1" max="10" value="5" data-cat="social"><span class="score">5</span></div>
+          <div class="trait"><label>Leadership</label><input type="range" min="1" max="10" value="5" data-cat="social"><span class="score">5</span></div>
+          <div class="trait"><label>Teamwork</label><input type="range" min="1" max="10" value="5" data-cat="social"><span class="score">5</span></div>
+          <div class="trait"><label>Attitude</label><input type="range" min="1" max="10" value="5" data-cat="social"><span class="score">5</span></div>
+          <div class="trait"><label>Respect</label><input type="range" min="1" max="10" value="5" data-cat="social"><span class="score">5</span></div>
+        </div>
+      </div>
+
+      <!-- Summary Card (above matrix) -->
+      <div id="stats-summary-card" style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, #667eea 60%, #764ba2 100%); color: #fff; border-radius: 12px; padding: 18px 24px; margin-bottom: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+        <div>
+          <h3 style="font-size: 1.2rem; margin-bottom: 6px;">Overall Player Rating</h3>
+          <div id="stats-overall-score" style="font-size: 2rem; font-weight: bold;">5.0</div>
+          <div id="stats-category-breakdown" style="margin-top: 6px; font-size: 1rem;"></div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 1rem;"><span id="stats-summary-name"></span></div>
+          <div style="font-size: 1rem;"><span id="stats-summary-position"></span></div>
+          <div style="font-size: 1rem;"><span id="stats-summary-club"></span></div>
+          <div style="font-size: 1rem;"><span id="stats-summary-age"></span></div>
+        </div>
+      </div>
+
+      <!-- Heat Matrix below summary -->
+      <div style="background:#fff; border-radius:12px; padding:18px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 18px;">
+        <h3 style="color:#495057; text-align:center; margin-bottom:10px;">Strengths & Weaknesses Matrix</h3>
+        <div id="statsHeatMatrix" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; text-align:center;"></div>
+        <div style="text-align:center; margin-top:10px;">
+          <button class="btn-download" onclick="downloadMatrixAsPNG()">Download Matrix</button>
+        </div>
+      </div>
+
+      <!-- Bar Chart (full width) -->
+      <div style="background:#fff; border-radius:12px; padding:18px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 18px;">
+        <h3 style="color:#495057; text-align:center; margin-bottom:10px;">Trait Comparison Bar Chart</h3>
+        <canvas id="statsBarChart"></canvas>
+        <div style="text-align:center; margin-top:10px;">
+          <button class="btn-download" onclick="downloadChartAsPNG('statsBarChart', 'Bar_Chart.png')">Download Bar Chart</button>
+        </div>
+      </div>
+
+      <!-- Pie and Line Chart Row (larger, aligned) -->
+      <div style="display: flex; flex-wrap: wrap; gap: 32px; justify-content: space-between; margin-bottom: 18px;">
+        <!-- Pie Chart (larger) -->
+        <div style="flex: 1 1 520px; min-width: 320px; max-width: 600px; background: #fff; border-radius: 12px; padding: 24px 24px 24px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 340px;">
+          <h3 style="color:#764ba2; text-align:center; margin-bottom:10px;">Category Distribution Pie Chart</h3>
+          <div style="height: 300px; width: 300px; display: flex; align-items: center; justify-content: center;">
+            <canvas id="statsPieChart" style="max-width: 300px; max-height: 300px;"></canvas>
+          </div>
+          <div style="text-align:center; margin-top:10px;">
+            <button class="btn-download" onclick="downloadChartAsPNG('statsPieChart', 'Pie_Chart.png')">Download Pie Chart</button>
+          </div>
+        </div>
+        <!-- Line Chart (larger, aligned) -->
+        <div style="flex: 1 1 520px; min-width: 320px; max-width: 600px; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-height: 340px;">
+          <h3 style="color:#28a745; text-align:center; margin-bottom:10px;">Category Progression Line Chart</h3>
+          <div style="height: 260px; width: 100%; display: flex; align-items: flex-end; justify-content: center;">
+            <canvas id="statsLineChart" style="max-width: 420px; max-height: 260px;"></canvas>
+          </div>
+          <div style="text-align:center; margin-top:10px;">
+            <button class="btn-download" onclick="downloadChartAsPNG('statsLineChart', 'Line_Chart.png')">Download Line Chart</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export/Load Buttons for Statistical Page -->
+      <div class="export-buttons" style="text-align: center; padding: 25px; background: #f8f9fa; margin-top: 30px; border-radius: 12px;">
+        <button class="btn-secondary" onclick="loadStatsSample()">Load Sample Data</button>
+        <button class="btn-primary" onclick="exportStatsExcel()">Export Excel</button>
+        <button class="btn-success" onclick="saveStatsJSON()">Save JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Move the main script block here, just before </body> -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let radarChart = null;
+    let lineChartStats = null;
+    let barChartStats = null;
+    let statsRadarChart = null;
+    let statsPieChart = null;
+    let statsBarChart = null;
+    let statsLineChart = null;
+
+    // Tab switching functionality
+    document.getElementById('btn-grid').addEventListener('click', () => switchTab('grid'));
+    document.getElementById('btn-venn').addEventListener('click', () => switchTab('venn'));
+    document.getElementById('btn-stats').addEventListener('click', () => switchTab('stats'));
+
+    function switchTab(tabName) {
+      // Hide all sections
+      document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+      });
+      
+      // Remove active from all tabs
+      document.querySelectorAll('.tabs button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Show selected section and mark tab as active
+      document.getElementById(tabName).classList.add('active');
+      document.getElementById(`btn-${tabName}`).classList.add('active');
+    }
+
+    // Grid template functionality
+    function setupGridEventListeners() {
+      const sliders = document.querySelectorAll('#grid input[type="range"]');
+      
+      sliders.forEach(slider => {
+        slider.addEventListener('input', function() {
+          // Update the score display next to the slider
+          const scoreSpan = this.parentElement.querySelector('.score');
+          scoreSpan.textContent = this.value;
+          
+          // Update category averages and overall score
+          updateGridScores();
+          updateRadarChart();
+          updateStatsViewCharts(); // Update statistical view charts
+        });
+      });
+    }
+
+    function updateGridScores() {
+      const categories = ['technical', 'physical', 'psychological', 'social'];
+      let totalScore = 0;
+      
+      categories.forEach(category => {
+        const sliders = document.querySelectorAll(`#grid input[data-cat="${category}"]`);
+        let categorySum = 0;
+        
+        sliders.forEach(slider => {
+          categorySum += parseInt(slider.value);
+        });
+        
+        const categoryAverage = (categorySum / sliders.length).toFixed(1);
+        document.getElementById(`grid-${category}-score`).textContent = categoryAverage;
+        totalScore += parseFloat(categoryAverage);
+      });
+      
+      const overallScore = (totalScore / categories.length).toFixed(1);
+      document.getElementById('grid-overall').textContent = overallScore;
+    }
+
+    function updateRadarChart() {
+      const ctx = document.getElementById('radarChart').getContext('2d');
+      
+      const technicalScore = parseFloat(document.getElementById('grid-technical-score').textContent);
+      const physicalScore = parseFloat(document.getElementById('grid-physical-score').textContent);
+      const psychologicalScore = parseFloat(document.getElementById('grid-psychological-score').textContent);
+      const socialScore = parseFloat(document.getElementById('grid-social-score').textContent);
+
+      const data = {
+        labels: ['Technical', 'Physical', 'Psychological', 'Social'],
+        datasets: [{
+          label: 'Player Scores',
+          data: [technicalScore, physicalScore, psychologicalScore, socialScore],
+          fill: true,
+          backgroundColor: 'rgba(102, 126, 234, 0.2)',
+          borderColor: 'rgba(102, 126, 234, 1)',
+          pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: 'rgba(102, 126, 234, 1)'
+        }]
+      };
+
+      const config = {
+        type: 'radar',
+        data: data,
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          scales: {
+            r: {
+              beginAtZero: true,
+              max: 10,
+              ticks: {
+                stepSize: 2
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      };
+
+      if (radarChart) {
+        radarChart.destroy();
+      }
+      
+      radarChart = new Chart(ctx, config);
+    }
+
+    function getGridData() {
+      function getValues(cat) {
+        return Array.from(document.querySelectorAll(`#grid input[data-cat="${cat}"]`)).map(input => input.value);
+      }
+      function getNote(idx) {
+        return document.querySelectorAll('#grid textarea.corner-notes')[idx]?.value || '';
+      }
+      const technical = getValues('technical');
+      const physical = getValues('physical');
+      const psychological = getValues('psychological');
+      const social = getValues('social');
+      return {
+        playerInfo: {
+          name: document.getElementById('grid-playerName')?.value || '',
+          age: document.getElementById('grid-playerAge')?.value || '',
+          nationality: document.getElementById('grid-playerNationality')?.value || '',
+          height: document.getElementById('grid-playerHeight')?.value || '',
+          weight: document.getElementById('grid-playerWeight')?.value || '',
+          position: document.getElementById('grid-playerPosition')?.value || '',
+          dominantFoot: document.getElementById('grid-playerFoot')?.value || '',
+          matchDate: document.getElementById('grid-matchDate')?.value || '',
+          club: document.getElementById('grid-playerClub')?.value || '',
+          opponent: document.getElementById('grid-opposition')?.value || ''
+        },
+        scores: {
+          technical: {
+            control: technical[0] || '',
+            passing: technical[1] || '',
+            shooting: technical[2] || '',
+            dribbling: technical[3] || '',
+            tackling: technical[4] || '',
+            average: document.getElementById('grid-technical-score')?.textContent || '',
+            notes: getNote(0)
+          },
+          physical: {
+            speed: physical[0] || '',
+            strength: physical[1] || '',
+            stamina: physical[2] || '',
+            agility: physical[3] || '',
+            jumping: physical[4] || '',
+            average: document.getElementById('grid-physical-score')?.textContent || '',
+            notes: getNote(1)
+          },
+          psychological: {
+            concentration: psychological[0] || '',
+            confidence: psychological[1] || '',
+            composure: psychological[2] || '',
+            mindset: psychological[3] || '',
+            motivation: psychological[4] || '',
+            average: document.getElementById('grid-psychological-score')?.textContent || '',
+            notes: getNote(2)
+          },
+          social: {
+            communication: social[0] || '',
+            leadership: social[1] || '',
+            teamwork: social[2] || '',
+            attitude: social[3] || '',
+            respect: social[4] || '',
+            average: document.getElementById('grid-social-score')?.textContent || '',
+            notes: getNote(3)
+          }
+        },
+        overallRating: document.getElementById('grid-overall')?.textContent || '',
+        playerAnalysis: {
+          strengths: document.getElementById('strengths-textarea')?.value || '',
+          improvements: document.getElementById('improvements-textarea')?.value || '',
+          overall: document.getElementById('overall-assessment-textarea')?.value || ''
+        }
+      };
+    }
+
+    function loadGridSample() {
+      // Set sample player data
+      document.getElementById('grid-playerName').value = 'Marcus Johnson';
+      document.getElementById('grid-playerAge').value = '22';
+      document.getElementById('grid-playerNationality').value = 'English';
+      document.getElementById('grid-playerHeight').value = '178';
+      document.getElementById('grid-playerWeight').value = '75';
+      document.getElementById('grid-playerPosition').value = 'CM';
+      document.getElementById('grid-playerFoot').value = 'Right';
+      document.getElementById('grid-matchDate').value = '2024-06-10';
+      document.getElementById('grid-playerClub').value = 'Arsenal FC';
+      document.getElementById('grid-opposition').value = 'Chelsea FC';
+      // Set sample scores
+      const sampleScores = [8, 7, 6, 9, 7, 8, 9, 8, 7, 8, 7, 8, 7, 6, 8, 9, 8, 7, 8, 9];
+      const sliders = document.querySelectorAll('#grid input[type="range"]');
+      sliders.forEach((slider, index) => {
+        slider.value = sampleScores[index] || 5;
+        const scoreSpan = slider.parentElement.querySelector('.score');
+        scoreSpan.textContent = slider.value;
+      });
+      // Add sample notes
+      const notes = [
+        'Excellent first touch under pressure. Shows great creativity in passing.',
+        'Strong physical presence. Good aerial ability but could improve sprint speed.',
+        'Very composed on the ball. Shows leadership qualities in difficult situations.',
+        'Great team player. Communicates well with teammates and shows respect for officials.'
+      ];
+      document.querySelectorAll('#grid textarea.corner-notes').forEach((textarea, index) => {
+        textarea.value = notes[index];
+      });
+      // Add sample player analysis
+      document.getElementById('strengths-textarea').value = '1. Excellent vision and passing range.\n2. Reads the game well and anticipates play.\n3. Maintains composure under pressure.';
+      document.getElementById('improvements-textarea').value = '1. Needs to improve sprint speed.\n2. Can work on defensive positioning.\n3. Should communicate more vocally on the pitch.';
+      document.getElementById('overall-assessment-textarea').value = 'Marcus is a technically gifted midfielder with a strong understanding of the game. He is reliable in possession and shows maturity beyond his years. With some improvements in speed and communication, he can become a top-level player.';
+      updateGridScores();
+      updateRadarChart();
+      updateStatsViewCharts(); // Update statistical view charts
+    }
+
+    function exportGridData() {
+      console.log('exportGridData called');
+      const data = getGridData();
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      // Player Info sheet
+      const playerInfoSheet = [
+        ['Player Information', ''],
+        ['Name', data.playerInfo.name],
+        ['Age', data.playerInfo.age],
+        ['Nationality', data.playerInfo.nationality],
+        ['Height (cm)', data.playerInfo.height],
+        ['Weight (kg)', data.playerInfo.weight],
+        ['Position', data.playerInfo.position],
+        ['Dominant Foot', data.playerInfo.dominantFoot],
+        ['Match Date', data.playerInfo.matchDate],
+        ['Club', data.playerInfo.club],
+        ['Opponent', data.playerInfo.opponent],
+        ['Overall Rating', data.overallRating]
+      ];
+      // Category Averages
+      playerInfoSheet.push(['']);
+      playerInfoSheet.push(['Category', 'Average']);
+      playerInfoSheet.push(['Technical', data.scores.technical.average]);
+      playerInfoSheet.push(['Physical', data.scores.physical.average]);
+      playerInfoSheet.push(['Psychological', data.scores.psychological.average]);
+      playerInfoSheet.push(['Social', data.scores.social.average]);
+      // Trait Scores
+      playerInfoSheet.push(['']);
+      playerInfoSheet.push(['Trait', 'Score']);
+      playerInfoSheet.push(['Control', data.scores.technical.control]);
+      playerInfoSheet.push(['Passing', data.scores.technical.passing]);
+      playerInfoSheet.push(['Shooting', data.scores.technical.shooting]);
+      playerInfoSheet.push(['Dribbling', data.scores.technical.dribbling]);
+      playerInfoSheet.push(['Tackling', data.scores.technical.tackling]);
+      playerInfoSheet.push(['Speed', data.scores.physical.speed]);
+      playerInfoSheet.push(['Strength', data.scores.physical.strength]);
+      playerInfoSheet.push(['Stamina', data.scores.physical.stamina]);
+      playerInfoSheet.push(['Agility', data.scores.physical.agility]);
+      playerInfoSheet.push(['Jumping', data.scores.physical.jumping]);
+      playerInfoSheet.push(['Concentration', data.scores.psychological.concentration]);
+      playerInfoSheet.push(['Confidence', data.scores.psychological.confidence]);
+      playerInfoSheet.push(['Composure', data.scores.psychological.composure]);
+      playerInfoSheet.push(['Mindset', data.scores.psychological.mindset]);
+      playerInfoSheet.push(['Motivation', data.scores.psychological.motivation]);
+      playerInfoSheet.push(['Communication', data.scores.social.communication]);
+      playerInfoSheet.push(['Leadership', data.scores.social.leadership]);
+      playerInfoSheet.push(['Teamwork', data.scores.social.teamwork]);
+      playerInfoSheet.push(['Attitude', data.scores.social.attitude]);
+      playerInfoSheet.push(['Respect', data.scores.social.respect]);
+      const ws1 = XLSX.utils.aoa_to_sheet(playerInfoSheet);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Player Info & Scores');
+      // Notes sheet
+      const ws2 = XLSX.utils.aoa_to_sheet([
+        ['Category', 'Notes'],
+        ['Technical', data.scores.technical.notes],
+        ['Physical', data.scores.physical.notes],
+        ['Psychological', data.scores.psychological.notes],
+        ['Social', data.scores.social.notes],
+        ['', ''],
+        ['Player Analysis', ''],
+        ['Strengths', data.playerAnalysis.strengths],
+        ['Areas of Improvement', data.playerAnalysis.improvements],
+        ['Overall Assessment', data.playerAnalysis.overall]
+      ]);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Notes & Analysis');
+      // Radar Chart sheet reference
+      const ws3 = XLSX.utils.aoa_to_sheet([
+        ['Radar Chart', 'See downloaded Radar_Chart.png'],
+        [''],
+        ['Note: The radar chart image is not embedded in this Excel file. Please use the "Download Radar Chart" button on the web page to save it as a PNG image.']
+      ]);
+      XLSX.utils.book_append_sheet(wb, ws3, 'Radar Chart');
+      // Save file
+      const fileName = `${data.playerInfo.name || 'Player'}_Scout_Report.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    }
+
+    function saveGridJSON() {
+      console.log('saveGridJSON called');
+      const data = getGridData();
+      const dataStr = JSON.stringify(data, null, 2);
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(dataBlob);
+      link.download = `${data.playerInfo.name || 'Player'}_Scout_Report.json`;
+      link.click();
+    }
+
+    function updateStatsViewCharts() {
+      const categories = ['technical', 'physical', 'psychological', 'social'];
+      const traitsByCategory = {
+        technical: ['Control', 'Passing', 'Shooting', 'Dribbling', 'Tackling'],
+        physical: ['Speed', 'Strength', 'Stamina', 'Agility', 'Jumping'],
+        psychological: ['Concentration', 'Confidence', 'Composure', 'Mindset', 'Motivation'],
+        social: ['Communication', 'Leadership', 'Teamwork', 'Attitude', 'Respect']
+      };
+
+      const allTraitScores = [];
+      const matrixContainer = document.getElementById('statsHeatMatrix');
+      matrixContainer.innerHTML = '';
+
+      const categoryScores = categories.map(cat => parseFloat(document.getElementById(`grid-${cat}-score`).textContent));
+      
+      // Build line chart (category averages)
+      const ctxLine = document.getElementById('lineChartStats').getContext('2d');
+      if (lineChartStats) lineChartStats.destroy();
+      lineChartStats = new Chart(ctxLine, {
+        type: 'line',
+        data: {
+          labels: categories.map(c => c.charAt(0).toUpperCase() + c.slice(1)),
+          datasets: [{
+            label: 'Category Score',
+            data: categoryScores,
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102,126,234,0.2)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, max: 10 } }
+        }
+      });
+
+      // Collect all trait scores for bar chart and heat map
+      let traitLabels = [];
+      let traitValues = [];
+
+      categories.forEach(cat => {
+        const inputs = document.querySelectorAll(`#grid input[data-cat="${cat}"]`);
+        inputs.forEach((slider, i) => {
+          const traitName = traitsByCategory[cat][i];
+          const score = parseInt(slider.value);
+          traitLabels.push(traitName);
+          traitValues.push(score);
+          allTraitScores.push({ name: traitName, score });
+
+          // Create heat matrix box
+          const color = score >= 8 ? '#28a745' : score >= 5 ? '#ffc107' : '#dc3545';
+          const textColor = score >= 5 ? '#fff' : '#fff';
+          const box = document.createElement('div');
+          box.style.background = color;
+          box.style.color = textColor;
+          box.style.padding = '15px';
+          box.style.borderRadius = '8px';
+          box.innerHTML = `<strong>${traitName}</strong><br>${score}`;
+          matrixContainer.appendChild(box);
+        });
+      });
+
+      // Bar chart for trait comparison
+      const ctxBar = document.getElementById('barChartStats').getContext('2d');
+      if (barChartStats) barChartStats.destroy();
+      barChartStats = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: traitLabels,
+          datasets: [{
+            label: 'Score',
+            data: traitValues,
+            backgroundColor: traitValues.map(v => v >= 8 ? '#28a745' : v >= 5 ? '#ffc107' : '#dc3545')
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 10
+            },
+            x: {
+              ticks: {
+                autoSkip: false,
+                maxRotation: 90,
+                minRotation: 45
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function getStatsTraitData() {
+      const categories = ['technical', 'physical', 'psychological', 'social'];
+      const traitsByCategory = {
+        technical: ['Control', 'Passing', 'Shooting', 'Dribbling', 'Tackling'],
+        physical: ['Speed', 'Strength', 'Stamina', 'Agility', 'Jumping'],
+        psychological: ['Concentration', 'Confidence', 'Composure', 'Mindset', 'Motivation'],
+        social: ['Communication', 'Leadership', 'Teamwork', 'Attitude', 'Respect']
+      };
+      let traitLabels = [];
+      let traitValues = [];
+      let categoryAverages = [];
+      let allTraitScores = [];
+      categories.forEach(cat => {
+        const sliders = document.querySelectorAll(`#stats-traits-grid input[data-cat="${cat}"]`);
+        let sum = 0;
+        sliders.forEach((slider, i) => {
+          const val = parseInt(slider.value);
+          sum += val;
+          traitLabels.push(traitsByCategory[cat][i]);
+          traitValues.push(val);
+          allTraitScores.push({ name: traitsByCategory[cat][i], score: val, cat });
+        });
+        categoryAverages.push((sum / sliders.length).toFixed(1));
+      });
+      return { traitLabels, traitValues, categoryAverages, allTraitScores, categories };
+    }
+
+    function updateStatsSummary() {
+      const { categoryAverages, categories } = getStatsTraitData();
+      let total = 0;
+      categoryAverages.forEach(avg => total += parseFloat(avg));
+      const overall = (total / categoryAverages.length).toFixed(1);
+      document.getElementById('stats-overall-score').textContent = overall;
+      // Category breakdown
+      let breakdown = '';
+      categories.forEach((cat, i) => {
+        let color = '';
+        let textColor = '';
+        if (cat === 'technical') { color = '#fff'; textColor = '#667eea'; } // readable on gradient
+        else if (cat === 'physical') { color = '#28a745'; textColor = '#fff'; }
+        else if (cat === 'psychological') { color = '#ffc107'; textColor = '#495057'; }
+        else { color = '#764ba2'; textColor = '#fff'; }
+        breakdown += `<span style='background:${color}; color:${textColor}; border-radius:6px; padding:2px 8px; margin-right:6px; font-weight:600;'>${cat.charAt(0).toUpperCase()+cat.slice(1)}: ${categoryAverages[i]}</span>`;
+      });
+      document.getElementById('stats-category-breakdown').innerHTML = breakdown;
+      // Player info
+      function hideIfEmpty(id, value) {
+        const el = document.getElementById(id);
+        if (el) {
+          if (!value) {
+            el.textContent = '';
+            el.classList.remove('stats-summary-faded');
+          } else {
+            el.textContent = value;
+            el.classList.remove('stats-summary-faded');
+          }
+        }
+      }
+      hideIfEmpty('stats-summary-name', document.getElementById('stats-playerName').value);
+      hideIfEmpty('stats-summary-position', document.getElementById('stats-playerPosition').value);
+      hideIfEmpty('stats-summary-club', document.getElementById('stats-playerClub').value);
+      hideIfEmpty('stats-summary-age', document.getElementById('stats-playerAge').value);
+    }
+
+    function updateStatsCharts() {
+      const { traitLabels, traitValues, categoryAverages, allTraitScores, categories } = getStatsTraitData();
+      // Pie
+      const ctxPie = document.getElementById('statsPieChart').getContext('2d');
+      if (statsPieChart) statsPieChart.destroy();
+      statsPieChart = new Chart(ctxPie, {
+        type: 'pie',
+        data: {
+          labels: categories.map(c => c.charAt(0).toUpperCase() + c.slice(1)),
+          datasets: [{
+            data: categoryAverages,
+            backgroundColor: ['#667eea', '#28a745', '#ffc107', '#764ba2'],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+      // Bar
+      const ctxBar = document.getElementById('statsBarChart').getContext('2d');
+      if (statsBarChart) statsBarChart.destroy();
+      statsBarChart = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: traitLabels,
+          datasets: [{
+            label: 'Score',
+            data: traitValues,
+            backgroundColor: traitValues.map(v => v >= 8 ? '#28a745' : v >= 5 ? '#ffc107' : '#dc3545')
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, max: 10 },
+            x: { ticks: { autoSkip: false, maxRotation: 90, minRotation: 45 } }
+          }
+        }
+      });
+      // Line Chart (category progression/insight)
+      const ctxLine = document.getElementById('statsLineChart').getContext('2d');
+      if (statsLineChart) statsLineChart.destroy();
+      statsLineChart = new Chart(ctxLine, {
+        type: 'line',
+        data: {
+          labels: categories.map(c => c.charAt(0).toUpperCase() + c.slice(1)),
+          datasets: [{
+            label: 'Category Average',
+            data: categoryAverages,
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40,167,69,0.12)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, max: 10 } }
+        }
+      });
+      // Heat Matrix
+      const matrixContainer = document.getElementById('statsHeatMatrix');
+      matrixContainer.innerHTML = '';
+      allTraitScores.forEach(({ name, score, cat }) => {
+        const color = score >= 8 ? '#28a745' : score >= 5 ? '#ffc107' : '#dc3545';
+        const textColor = '#fff';
+        const box = document.createElement('div');
+        box.style.background = color;
+        box.style.color = textColor;
+        box.style.padding = '10px';
+        box.style.borderRadius = '8px';
+        box.style.fontWeight = '600';
+        box.innerHTML = `<strong>${name}</strong><br>${score}`;
+        matrixContainer.appendChild(box);
+      });
+    }
+
+    function setupStatsEventListeners() {
+      // Sliders
+      document.querySelectorAll('#stats-traits-grid input[type="range"]').forEach(slider => {
+        slider.addEventListener('input', function() {
+          this.parentElement.querySelector('.score').textContent = this.value;
+          updateStatsSummary();
+          updateStatsCharts();
+        });
+      });
+      // Player info
+      ['stats-playerName','stats-playerAge','stats-playerNationality','stats-playerHeight','stats-playerWeight','stats-playerPosition','stats-playerFoot','stats-matchDate','stats-playerClub','stats-opposition'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateStatsSummary);
+      });
+    }
+
+    document.getElementById('btn-stats').addEventListener('click', () => {
+      updateStatsSummary();
+      updateStatsCharts();
+    });
+
+    // --- Statistical Page Export/Load Functions ---
+    function loadStatsSample() {
+      // Player info
+      document.getElementById('stats-playerName').value = 'Alex Carter';
+      document.getElementById('stats-playerAge').value = '20';
+      document.getElementById('stats-playerNationality').value = 'English';
+      document.getElementById('stats-playerHeight').value = '185';
+      document.getElementById('stats-playerWeight').value = '80';
+      document.getElementById('stats-playerPosition').value = 'CB';
+      document.getElementById('stats-playerFoot').value = 'Right';
+      document.getElementById('stats-matchDate').value = '2024-06-10';
+      document.getElementById('stats-playerClub').value = 'Manchester United';
+      document.getElementById('stats-opposition').value = 'Arsenal FC';
+      // Sliders
+      const sampleScores = [7, 8, 6, 7, 8, 8, 7, 8, 7, 8, 7, 8, 7, 6, 8, 9, 8, 7, 8, 9];
+      const sliders = document.querySelectorAll('#stats-traits-grid input[type="range"]');
+      sliders.forEach((slider, index) => {
+        slider.value = sampleScores[index] || 5;
+        const scoreSpan = slider.parentElement.querySelector('.score');
+        scoreSpan.textContent = slider.value;
+      });
+      updateStatsSummary();
+      updateStatsCharts();
+    }
+
+    function saveStatsJSON() {
+      const data = getStatsExportData();
+      const dataStr = JSON.stringify(data, null, 2);
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(dataBlob);
+      link.download = `${data.playerInfo.name || 'Player'}_Statistical_Report.json`;
+      link.click();
+    }
+
+    function getStatsExportData() {
+      // Player info
+      const playerInfo = {
+        name: document.getElementById('stats-playerName').value,
+        age: document.getElementById('stats-playerAge').value,
+        nationality: document.getElementById('stats-playerNationality').value,
+        height: document.getElementById('stats-playerHeight').value,
+        weight: document.getElementById('stats-playerWeight').value,
+        position: document.getElementById('stats-playerPosition').value,
+        dominantFoot: document.getElementById('stats-playerFoot').value,
+        matchDate: document.getElementById('stats-matchDate').value,
+        club: document.getElementById('stats-playerClub').value,
+        opponent: document.getElementById('stats-opposition').value
+      };
+      // Scores
+      const { traitLabels, traitValues, categoryAverages, categories } = getStatsTraitData();
+      const traitScores = {};
+      traitLabels.forEach((label, i) => {
+        traitScores[label] = traitValues[i];
+      });
+      const categoryScores = {};
+      categories.forEach((cat, i) => {
+        categoryScores[cat] = categoryAverages[i];
+      });
+      return {
+        playerInfo,
+        traitScores,
+        categoryScores
+      };
+    }
+
+    async function exportStatsExcel() {
+      const data = getStatsExportData();
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      // Player Info sheet
+      const playerInfoSheet = [
+        ['Player Information', ''],
+        ['Name', data.playerInfo.name],
+        ['Age', data.playerInfo.age],
+        ['Nationality', data.playerInfo.nationality],
+        ['Height (cm)', data.playerInfo.height],
+        ['Weight (kg)', data.playerInfo.weight],
+        ['Position', data.playerInfo.position],
+        ['Dominant Foot', data.playerInfo.dominantFoot],
+        ['Match Date', data.playerInfo.matchDate],
+        ['Club', data.playerInfo.club],
+        ['Opponent', data.playerInfo.opponent]
+      ];
+      // Category Averages
+      playerInfoSheet.push(['']);
+      playerInfoSheet.push(['Category', 'Average']);
+      Object.entries(data.categoryScores).forEach(([cat, avg]) => {
+        playerInfoSheet.push([cat.charAt(0).toUpperCase() + cat.slice(1), avg]);
+      });
+      // Trait Scores
+      playerInfoSheet.push(['']);
+      playerInfoSheet.push(['Trait', 'Score']);
+      Object.entries(data.traitScores).forEach(([trait, score]) => {
+        playerInfoSheet.push([trait, score]);
+      });
+      const ws1 = XLSX.utils.aoa_to_sheet(playerInfoSheet);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Player Info & Scores');
+
+      // --- Charts Sheet ---
+      const ws2 = XLSX.utils.aoa_to_sheet([
+        ['Charts & Visuals'],
+        [''],
+        ['Bar Chart', 'See downloaded Bar_Chart.png'],
+        ['Line Chart', 'See downloaded Line_Chart.png'],
+        ['Pie Chart', 'See downloaded Pie_Chart.png'],
+        ['Matrix', 'See downloaded Matrix.png'],
+        [''],
+        ['Note: Chart and matrix images are not embedded in this Excel file. Please use the "Download" buttons on the web page to save each as a PNG image.']
+      ]);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Charts');
+
+      // Save file
+      const fileName = `${data.playerInfo.name || 'Player'}_Statistical_Report.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    }
+
+    // --- Chart Download as PNG ---
+    function downloadChartAsPNG(canvasId, filename) {
+      const canvas = document.getElementById(canvasId);
+      // Determine title based on canvasId
+      let title = '';
+      if (canvasId === 'statsBarChart') title = 'Trait Comparison Bar Chart';
+      else if (canvasId === 'statsPieChart') title = 'Category Distribution Pie Chart';
+      else if (canvasId === 'statsLineChart') title = 'Category Progression Line Chart';
+      else if (canvasId === 'radarChart') title = 'Player Radar Chart';
+      // Add title for relevant charts
+      if (title) {
+        const padding = 32;
+        const titleFont = 'bold 22px Segoe UI, Arial, sans-serif';
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = canvas.width;
+        tmpCanvas.height = canvas.height + padding;
+        const ctx = tmpCanvas.getContext('2d');
+        // Fill background with white
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+        // Draw title
+        ctx.font = titleFont;
+        ctx.fillStyle = '#222';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(title, tmpCanvas.width / 2, 8);
+        // Draw chart image below title
+        ctx.drawImage(canvas, 0, padding);
+        // Download
+        const link = document.createElement('a');
+        link.href = tmpCanvas.toDataURL('image/png');
+        link.download = filename;
+        link.click();
+      } else {
+        // Default for other charts
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = canvas.width;
+        tmpCanvas.height = canvas.height;
+        const ctx = tmpCanvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+        ctx.drawImage(canvas, 0, 0);
+        const link = document.createElement('a');
+        link.href = tmpCanvas.toDataURL('image/png');
+        link.download = filename;
+        link.click();
+      }
+    }
+
+    // --- Matrix Download as PNG ---
+    function downloadMatrixAsPNG() {
+      const matrix = document.getElementById('statsHeatMatrix');
+      const width = matrix.offsetWidth;
+      const height = matrix.offsetHeight;
+      const padding = 40;
+      const title = 'Strengths & Weaknesses Matrix';
+      html2canvas(matrix, {backgroundColor: '#fff', width, height}).then(canvas => {
+        // Create a new canvas with space for the title
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = canvas.width;
+        tmpCanvas.height = canvas.height + padding;
+        const ctx = tmpCanvas.getContext('2d');
+        // Fill background with white
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, tmpCanvas.width, tmpCanvas.height);
+        // Draw title
+        ctx.font = 'bold 22px Segoe UI, Arial, sans-serif';
+        ctx.fillStyle = '#222';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(title, tmpCanvas.width / 2, 10);
+        // Draw matrix image below title
+        ctx.drawImage(canvas, 0, padding);
+        // Download
+        const link = document.createElement('a');
+        link.href = tmpCanvas.toDataURL('image/png');
+        link.download = 'Matrix.png';
+        link.click();
+      });
+    }
+
+    // --- Venn Analysis Drag & Drop ---
+    const vennTraits = [
+      { label: 'Control', cat: 'technical' },
+      { label: 'Passing', cat: 'technical' },
+      { label: 'Shooting', cat: 'technical' },
+      { label: 'Dribbling', cat: 'technical' },
+      { label: 'Tackling', cat: 'technical' },
+      { label: 'Speed', cat: 'physical' },
+      { label: 'Strength', cat: 'physical' },
+      { label: 'Stamina', cat: 'physical' },
+      { label: 'Agility', cat: 'physical' },
+      { label: 'Jumping', cat: 'physical' },
+      { label: 'Concentration', cat: 'psychological' },
+      { label: 'Confidence', cat: 'psychological' },
+      { label: 'Composure', cat: 'psychological' },
+      { label: 'Mindset', cat: 'psychological' },
+      { label: 'Motivation', cat: 'psychological' },
+      { label: 'Communication', cat: 'social' },
+      { label: 'Leadership', cat: 'social' },
+      { label: 'Teamwork', cat: 'social' },
+      { label: 'Attitude', cat: 'social' },
+      { label: 'Respect', cat: 'social' }
+    ];
+
+    // --- Venn Analysis State ---
+    let vennUsedTraits = {};
+
+    function renderVennTraits() {
+      const container = document.getElementById('venn-traits');
+      container.innerHTML = '';
+      vennTraits.forEach((trait, idx) => {
+        if (vennUsedTraits[trait.label]) return; // skip if used
+        const btn = document.createElement('button');
+        btn.className = `venn-trait-btn ${trait.cat}`;
+        btn.textContent = trait.label;
+        btn.setAttribute('draggable', 'true');
+        btn.dataset.trait = trait.label;
+        btn.dataset.cat = trait.cat;
+        btn.dataset.idx = idx;
+        btn.addEventListener('dragstart', vennDragStart);
+        container.appendChild(btn);
+      });
+    }
+
+    let draggedTrait = null;
+
+    function vennDragStart(e) {
+      draggedTrait = {
+        label: this.dataset.trait,
+        cat: this.dataset.cat,
+        idx: this.dataset.idx
+      };
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', JSON.stringify(draggedTrait));
+    }
+
+    function vennDragOver(e) {
+      e.preventDefault();
+      this.classList.add('drag-over');
+    }
+    function vennDragLeave(e) {
+      this.classList.remove('drag-over');
+    }
+    function vennDrop(e) {
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      let trait;
+      try {
+        trait = draggedTrait || JSON.parse(e.dataTransfer.getData('text/plain'));
+      } catch { return; }
+      if (!trait) return;
+      // Prompt for note
+      const note = prompt(`Add a brief note for "${trait.label}":`, '');
+      if (note === null) return; // Cancelled
+      // Add to drop list
+      const dropList = this.querySelector('.venn-drop-list') || this;
+      const div = document.createElement('div');
+      div.className = 'venn-dropped';
+      div.innerHTML = `
+        <span class="venn-category-dot" style="background:${vennCatColor(trait.cat)};"></span>
+        <span class="venn-trait-label">${trait.label}</span>
+        <span class="venn-note">${note}</span>
+        <button class="venn-remove-btn" title="Remove">×</button>
+      `;
+      div.querySelector('.venn-remove-btn').onclick = () => {
+        div.remove();
+        delete vennUsedTraits[trait.label];
+        renderVennTraits();
+      };
+      dropList.appendChild(div);
+      vennUsedTraits[trait.label] = true;
+      renderVennTraits();
+    }
+    function vennCatColor(cat) {
+      if (cat === 'technical') return '#667eea';
+      if (cat === 'physical') return '#28a745';
+      if (cat === 'psychological') return '#ffc107';
+      if (cat === 'social') return '#764ba2';
+      return '#495057';
+    }
+
+    function setupVennDragDrop() {
+      ['venn-strengths','venn-average','venn-weaknesses'].forEach(id => {
+        const zone = document.getElementById(id);
+        zone.addEventListener('dragover', vennDragOver);
+        zone.addEventListener('dragleave', vennDragLeave);
+        zone.addEventListener('drop', vennDrop);
+      });
+    }
+
+    document.getElementById('btn-venn').addEventListener('click', () => {
+      vennUsedTraits = {};
+      renderVennTraits();
+      setupVennDragDrop();
+    });
+
+    // --- Venn Export/Import Functions ---
+    function getVennPlayerInfo() {
+      return {
+        name: document.getElementById('venn-playerName').value,
+        age: document.getElementById('venn-playerAge').value,
+        nationality: document.getElementById('venn-playerNationality').value,
+        height: document.getElementById('venn-playerHeight').value,
+        weight: document.getElementById('venn-playerWeight').value,
+        position: document.getElementById('venn-playerPosition').value,
+        dominantFoot: document.getElementById('venn-playerFoot').value,
+        matchDate: document.getElementById('venn-matchDate').value,
+        club: document.getElementById('venn-playerClub').value,
+        opponent: document.getElementById('venn-opposition').value
+      };
+    }
+
+    function getVennTraitsData() {
+      // For each zone, collect dropped traits and notes, grouped by category
+      const zones = [
+        { id: 'venn-strengths-list', label: 'Strengths' },
+        { id: 'venn-average-list', label: 'Average' },
+        { id: 'venn-weaknesses-list', label: 'Weaknesses' }
+      ];
+      const result = { strengths: [], average: [], weaknesses: [] };
+      zones.forEach(zone => {
+        const items = document.querySelectorAll(`#${zone.id} .venn-dropped`);
+        items.forEach(item => {
+          const trait = item.querySelector('.venn-trait-label').textContent;
+          const note = item.querySelector('.venn-note').textContent;
+          // Find category
+          const cat = (vennTraits.find(t => t.label === trait) || {}).cat || '';
+          const entry = { trait, note, category: cat };
+          if (zone.label === 'Strengths') result.strengths.push(entry);
+          else if (zone.label === 'Average') result.average.push(entry);
+          else if (zone.label === 'Weaknesses') result.weaknesses.push(entry);
+        });
+      });
+      return result;
+    }
+
+    function exportVennExcel() {
+      const player = getVennPlayerInfo();
+      const traits = getVennTraitsData();
+      const wb = XLSX.utils.book_new();
+      // Player Info sheet
+      const playerSheet = [
+        ['Player Information', ''],
+        ['Name', player.name],
+        ['Age', player.age],
+        ['Nationality', player.nationality],
+        ['Height (cm)', player.height],
+        ['Weight (kg)', player.weight],
+        ['Position', player.position],
+        ['Dominant Foot', player.dominantFoot],
+        ['Match Date', player.matchDate],
+        ['Club', player.club],
+        ['Opponent', player.opponent]
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(playerSheet), 'Player Info');
+      // Categorized Traits sheet
+      const traitSheet = [
+        ['Category', 'Trait', 'Four Corner', 'Note/Description']
+      ];
+      [
+        { arr: traits.strengths, cat: 'Strengths' },
+        { arr: traits.average, cat: 'Average' },
+        { arr: traits.weaknesses, cat: 'Weaknesses' }
+      ].forEach(group => {
+        group.arr.forEach(entry => {
+          traitSheet.push([
+            group.cat,
+            entry.trait,
+            entry.category.charAt(0).toUpperCase() + entry.category.slice(1),
+            entry.note
+          ]);
+        });
+        if (group.arr.length) traitSheet.push(['', '', '', '']); // blank line between groups
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(traitSheet), 'Traits & Notes');
+      // Save file
+      const fileName = `${player.name || 'Player'}_Venn_Analysis.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    }
+
+    function saveVennJSON() {
+      const player = getVennPlayerInfo();
+      const traits = getVennTraitsData();
+      const data = { player, traits };
+      const dataStr = JSON.stringify(data, null, 2);
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(dataBlob);
+      link.download = `${player.name || 'Player'}_Venn_Analysis.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function loadVennSample() {
+      // Example player info
+      document.getElementById('venn-playerName').value = 'Jordan Smith';
+      document.getElementById('venn-playerAge').value = '19';
+      document.getElementById('venn-playerNationality').value = 'English';
+      document.getElementById('venn-playerHeight').value = '178';
+      document.getElementById('venn-playerWeight').value = '72';
+      document.getElementById('venn-playerPosition').value = 'CM';
+      document.getElementById('venn-playerFoot').value = 'Right';
+      document.getElementById('venn-matchDate').value = '2024-06-10';
+      document.getElementById('venn-playerClub').value = 'Liverpool FC';
+      document.getElementById('venn-opposition').value = 'Manchester City';
+      // Clear all zones and used traits
+      vennUsedTraits = {};
+      ['venn-strengths-list','venn-average-list','venn-weaknesses-list'].forEach(id => {
+        document.getElementById(id).innerHTML = '';
+      });
+      // Example traits
+      const sample = [
+        { zone: 'venn-strengths-list', trait: 'Passing', note: 'Excellent vision and accuracy.' },
+        { zone: 'venn-strengths-list', trait: 'Teamwork', note: 'Always supports teammates.' },
+        { zone: 'venn-average-list', trait: 'Stamina', note: 'Maintains energy most of the match.' },
+        { zone: 'venn-weaknesses-list', trait: 'Tackling', note: 'Needs to improve timing.' }
+      ];
+      sample.forEach(({zone, trait, note}) => {
+        const traitObj = vennTraits.find(t => t.label === trait);
+        if (!traitObj) return;
+        vennUsedTraits[trait] = true;
+        const dropList = document.getElementById(zone);
+        const div = document.createElement('div');
+        div.className = 'venn-dropped';
+        div.innerHTML = `
+          <span class="venn-category-dot" style="background:${vennCatColor(traitObj.cat)};"></span>
+          <span class="venn-trait-label">${trait}</span>
+          <span class="venn-note">${note}</span>
+          <button class="venn-remove-btn" title="Remove">×</button>
+        `;
+        div.querySelector('.venn-remove-btn').onclick = () => {
+          div.remove();
+          delete vennUsedTraits[trait];
+          renderVennTraits();
+        };
+        dropList.appendChild(div);
+      });
+      renderVennTraits();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      setupGridEventListeners();
+      updateRadarChart();
+      setupStatsEventListeners();
+      updateStatsSummary();
+      updateStatsCharts();
+      // Remove these lines:
+      // window.exportGridData = exportGridData;
+      // window.saveGridJSON = saveGridJSON;
+    });
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</body>
+</html>
